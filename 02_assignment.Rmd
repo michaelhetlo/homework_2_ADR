@@ -24,6 +24,7 @@ library(vip)               # for variable importance plots
 library(DALEX)             # for model interpretation  
 library(DALEXtra)          # for extension of DALEX
 library(patchwork)         # for combining plots nicely
+library(GGally)
 theme_set(theme_minimal()) # Lisa's favorite theme
 ```
 
@@ -39,6 +40,8 @@ When you finish the assignment, remove the `#` from the options chunk at the top
 
 From now on, GitHub should be part of your routine when doing assignments. I recommend making it part of your process anytime you are working in R, but I'll make you show it's part of your process for assignments.
 
+[gitHub](https://github.com/michaelhetlo/homework_2_ADR)
+
 **Task**: When you are finished with the assignment, post a link below to the GitHub repo for the assignment. If you want to post it to your personal website, that's ok (not required). Make sure the link goes to a spot in the repo where I can easily find this assignment. For example, if you have a website with a blog and post the assignment as a blog post, link to the post's folder in the repo. As an example, I've linked to my GitHub stacking material [here](https://github.com/llendway/ads_website/tree/master/_posts/2021-03-22-stacking).
 
 ## Modeling
@@ -53,7 +56,62 @@ The outcome we are interested in predicting is `Class`. And according to the dat
 
 1. Explore the data, concentrating on examining distributions of variables and examining missing values. 
 
+```{r}
+lending_club %>%
+  ggplot(aes(x = funded_amnt)) +
+  geom_density()
+```
+
+```{r}
+lending_club %>%
+  group_by(Class) %>%
+  summarise(total = n())
+```
+
+```{r}
+lending_club %>%
+  ggplot(aes(x = int_rate, fill = Class)) +
+  geom_density(alpha = .5)
+```
+
+```{r}
+lending_club %>%
+  ggplot(aes(annual_inc)) + 
+  geom_histogram()
+```
+
+```{r}
+lending_club %>%
+  keep(is.numeric) %>% 
+  gather() %>% 
+  ggplot(aes(value)) +
+    facet_wrap(~ key, scales = "free") +
+    geom_histogram()
+```
+
+```{r}
+lending_club %>%
+  mutate(delinq_amnt = ifelse(delinq_amnt == 0, 0, 1)) %>%
+  group_by(delinq_amnt) %>%
+  summarise(total = n())
+```
+
+```{r}
+lending_club %>%
+  mutate(acc_now_delinq = ifelse(acc_now_delinq == 0, 0, 1)) %>%
+  group_by(acc_now_delinq) %>%
+  summarise(total = n())
+```
+
+
 2. Do any data cleaning steps that need to happen before the model is build. For example, you might remove any variables that mean the same thing as the response variable (not sure if that happens here), get rid of rows where all variables have missing values, etc. 
+
+```{r}
+lending_club %>%
+  add_n_miss() %>%
+  group_by(n_miss_all) %>%
+  summarise(total = n())
+```
 
 Be sure to add more "bad" Classes. This is not the best solution, but it will work for now. (Should investigate how to appropriately use `step_sample_up()` function from [`themis`](https://github.com/tidymodels/themis)).
 
@@ -70,6 +128,12 @@ lending_club_mod <- lending_club %>%
 
 ```{r}
 set.seed(494) # for reproducibility
+lending_split <- initial_split(lending_club_mod, prop = .75, strata = 'Class')
+```
+
+```{r}
+lending_training <- training(lending_split)
+lending_test <- testing(lending_split)
 ```
 
 4. Set up the recipe and the pre-processing steps to build a lasso model. Some steps you should take:
@@ -78,6 +142,26 @@ set.seed(494) # for reproducibility
 * Think about grouping factor variables with many levels.  
 * Make categorical variables dummy variables (make sure NOT to do this to the outcome variable).  
 * Normalize quantitative variables.  
+
+```{r}
+lending_recipe <- recipe(Class ~ ., 
+                       data = lending_training) %>%
+  step_rm(acc_now_delinq, delinq_amnt) %>%
+  step_mutate_at(all_numeric(), fn = ~as.numeric(.)) %>%
+  step_mutate(sub_grade = as.factor(substring(sub_grade, 1, 1))) %>%
+  step_mutate(addr_state = fct_lump_n(addr_state, n = 4)) %>%
+  step_mutate(verification_status = ifelse(verification_status == "Not_Verified", "Not_Verified", "Verified")) %>%
+  step_mutate(annual_inc = case_when(annual_inc <= 9875 ~ 10,
+                                     annual_inc > 9875 && annual_inc <= 40125 ~ 12,
+                                     annual_inc > 40125 && annual_inc <= 85525 ~ 22,
+                                     annual_inc > 855255 && annual_inc <= 163300 ~24,
+                                     annual_inc > 163300 && annual_inc <= 207350 ~ 32,
+                                     annual_inc > 207350 && annual_inc <= 518400 ~ 35,
+                                     annual_inc > 518400 ~ 37)) %>%
+  step_mutate(annual_inc = as.factor(annual_inc)) %>%
+  step_normalize(all_predictors(),-all_nominal()) %>%
+  step_dummy(all_nominal(), -all_outcomes())
+```
 
 5. Set up the lasso model and workflow. We will tune the `penalty` parameter.
 
