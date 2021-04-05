@@ -9,7 +9,7 @@ output:
 ---
 
 ```{r setup, include=FALSE}
-#knitr::opts_chunk$set(echo = TRUE, message=FALSE, warning=FALSE)
+knitr::opts_chunk$set(echo = TRUE, message=FALSE, warning=FALSE)
 ```
 
 ```{r libraries}
@@ -433,6 +433,11 @@ lending_stack_test %>%
 autoplot(roc_curve(lending_stack_test, Class, .pred_bad))
 ```
 
+```{r}
+saveRDS(lending_final_stack, file = 'lending_final_stack.rds')
+```
+
+
 ## Shiny app
 
 If you are new to Shiny apps or it's been awhile since you've made one, visit the Shiny links on our course [Resource](https://advanced-ds-in-r.netlify.app/resources.html) page. I would recommend starting with my resource because it will be the most basic. You won't be doing anything super fancy in this app. 
@@ -460,6 +465,8 @@ Specifically, you will do the following:
 ## Coded Bias
 
 Watch the [Code Bias](https://www.pbs.org/independentlens/films/coded-bias/) film and write a short reflection. If you want some prompts, reflect on: What part of the film impacted you the most? Was there a part that surprised you and why? What emotions did you experience while watching?
+
+The face recognition police usage in the UK is the thing that impacted me the most.  It showed how countries are using computers to become security states, while the AI and software is not good at what is suppose to do.  It impacted me because I had an expierence as a minor of being fingerprinted and questioned for something I didn't do and so when I saw the kid in the UK get stopped and questioned I could feel some of the same anxieties and worries he did.  As well the part where it talked about how the tech is being used in low income and predominately black and brown neighborhoods as test sites felt so wrong and icky to me.  It is not okay to violate individuals rights just because they don't have a voice to fight back.
 
 
 REMEMBER TO ADD YOUR GITHUB LINK AT THE TOP OF THE PAGE AND UNCOMMENT THE `knitr` OPTIONS.
